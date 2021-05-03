@@ -1,0 +1,52 @@
+
+services:
+
+    mysql:
+        restart: always
+        image: mysql
+        working_dir: "$PWD"
+        volumes:
+            - "./:$PWD"
+            - mysql:/var/lib/mysql
+        ports:
+            - '0:3306'
+        command: '--log-bin --binlog-format=row --binlog-row-image=full'
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            #MYSQL_USER: akeneo_pim
+            #MYSQL_PASSWORD: akeneo_pim
+            #MYSQL_DATABASE: akeneo_pim
+
+    tb:
+        restart: always
+        image: materialize/tb
+        command: [
+            '-t', 'mysql',
+            '-p', '3306',
+            '-d', 'root',
+            '-H', 'mysql',
+            '-u', 'root',
+            '-P', 'root',
+            '--dir', '/tb/data',
+            '--save-file', '/tb/status',
+            '--whitelist', 'root.test1'
+        ]
+        volumes:
+          - tb:/tb
+
+    materialized:
+        restart: always
+        image: materialize/materialized:latest
+        command: --workers 1
+        working_dir: "$PWD"
+        volumes:
+            - "./:$PWD"
+            - tb:/tb
+            - materialized:/materialized
+        ports:
+            - '0:6875'
+
+volumes:
+  mysql: ~
+  tb: ~
+  materialized: ~
